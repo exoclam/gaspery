@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gaspery"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
   { name="Christopher Lam", email="c.lam@ufl.edu" },
 ]
@@ -18,5 +18,5 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/cl3425/scheduling"
-"Bug Tracker" = "https://github.com/cl3425/scheduling/issues"
+"Homepage" = "https://github.com/cl3425/gaspery"
+"Bug Tracker" = "https://github.com/cl3425/gaspery/issues"
