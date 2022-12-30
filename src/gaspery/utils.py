@@ -1,6 +1,5 @@
 import numpy as np 
 import scipy
-import tqdm
 import pandas as pd
 import random
 import exoplanet

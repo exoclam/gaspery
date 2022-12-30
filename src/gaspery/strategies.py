@@ -1,6 +1,5 @@
 import numpy as np 
 import scipy
-import tqdm
 import pandas as pd
 import random
 import exoplanet
@@ -18,7 +17,9 @@ import jax
 import jax.numpy as jnp
 from jax import grad, jit, vmap
 
-class Strategy(n_obs, cadence, start, offs=[], dropout=0.):
+from gaspery import utils
+
+class Strategy: #(n_obs, cadence, start, offs=[], dropout=0.):
     """
 
     Functions that make strategies, based on user inputs. 
@@ -34,6 +35,42 @@ class Strategy(n_obs, cadence, start, offs=[], dropout=0.):
     - Strategy object, on which the following strategy-building functions can operate.
 
     """
+
+    def __init__(
+        self, n_obs, cadence, start, offs=[], dropout=0., **kwargs
+    ):
+        self.n_obs = n_obs
+        self.cadence = cadence
+        self.start = start
+        self.offs = offs
+        self.dropout = dropout 
+
+    
+    def make_t(self):
+        """
+        Generate observation times given a number of observations and an average cadence (every X nights)
+        
+        Input: 
+        - Strategy object
+        
+        Output:
+        - observation times: ndarray
+        
+        """
+        
+        n_obs = self.n_obs
+        cadence = self.cadence
+        start = self.start
+
+        ### make a t using n_obs and cadence
+        end = start + n_obs * cadence 
+        t = np.linspace(start, end, n_obs, endpoint=False)
+        
+        # add jitter ~ N(0, 1 hr) to timestamps
+        t += np.random.normal(0, 1./24)
+
+        return t
+
 
     def remove(l,n):
         """
@@ -63,7 +100,11 @@ class Strategy(n_obs, cadence, start, offs=[], dropout=0.):
         """
         
         total_t = []
-        start_temp = start
+        start = self.start
+        offs = self.offs
+        dropout = self.dropout
+        n_obs = self.n_obs
+        cadence = self.cadence 
         n_tot = 0
         n = 0
         
@@ -73,13 +114,13 @@ class Strategy(n_obs, cadence, start, offs=[], dropout=0.):
                 # allow for multiple spans of off nights
                 for off in offs:
 
-                    end_temp = off[0]
+                    end = off[0]
 
                     # rearrange from end = start + n_obs * cadence to get on chunk
-                    n = int(np.ceil((end_temp - start_temp)/cadence))
+                    n = int(np.ceil((end - start)/cadence))
 
                     try: # if off != offs[-1]: # if there are yet more offs? 
-                        t = np.linspace(start_temp, end_temp, n, endpoint=False)
+                        t = np.linspace(start, end, n, endpoint=False)
                         # add jitter ~ N(0, 1 hr) to timestamps
                         t += np.random.normal(0, 1./24)
                         total_t = np.concatenate([total_t, t])
@@ -87,8 +128,8 @@ class Strategy(n_obs, cadence, start, offs=[], dropout=0.):
 
                     except: # if there aren't, then we just straight shot til n_obs is fulfilled
                         #print("exception")
-                        end_temp = start_temp + n_remaining * cadence
-                        t = np.linspace(start_temp, end_temp, n_remaining, endpoint=False)
+                        end = start + n_remaining * cadence
+                        t = np.linspace(start, end, n_remaining, endpoint=False)
 
                         # add jitter ~ N(0, 1 hr) to timestamps
                         t += np.random.normal(0, 1./24)
@@ -97,7 +138,7 @@ class Strategy(n_obs, cadence, start, offs=[], dropout=0.):
 
 
                     # new start time
-                    start_temp = off[1]
+                    start = off[1]
 
                     n_tot = len(total_t)
 
@@ -115,10 +156,10 @@ class Strategy(n_obs, cadence, start, offs=[], dropout=0.):
                 total_t = total_t[:-n_extra]
         
         else:
-            total_t = make_t(n_obs, cadence, start)
+            total_t = self.make_t()
         
         # dropout some observations based on dropout
-        total_t = remove(total_t, dropout)
+        total_t = Strategy.remove(total_t, dropout)
         
         return total_t
 
