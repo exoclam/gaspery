@@ -41,16 +41,17 @@ def model_jax(t, K, P, T0):
     return rv
 
 
-def cov_matrix_jax(t, params):
+def cov_matrix_jax(t, params, sigma_wn_rv):
     """
     Build a covariance matrix, Sigma, that will be used in the calculation of the Fisher Information Matrix
     
     Inputs:
     - t: time series of length N observations; np.array [day]
-    - Tau: active region lifetime [days]; free param taken from Langellier et al 2020
-    - eta: smoothing parameter; free param taken from Langellier et al 2020
-    - Prot: rotation period [days]; free param taken from Langellier et al 2020
-    - sigma_qp_rv: correlated noise amplitude; free param taken from Langellier et al 2020
+    - params: list of stellar correlated noise parameters
+        - Tau: active region lifetime [days]; free param taken from Langellier et al 2020
+        - eta: smoothing parameter; free param taken from Langellier et al 2020
+        - Prot: rotation period [days]; free param taken from Langellier et al 2020
+        - sigma_qp_rv: correlated noise amplitude; free param taken from Langellier et al 2020
     - sigma_wn_rv: white noise amplitude; free param taken from Langellier et al 2020
     
     Outputs:
@@ -90,11 +91,9 @@ def clam_jax_fim(t, sigma, theta):
     - t: time series of length N observations; np.array [day]
     - sigma: RV measurement uncertainties associated with each observation; np.array of length N [cm/s]
     - theta: planet orbital parameters; eg. [K, P, T0]; np.array
-    - stellar_params: correlated stellar noise parameters, a la Langellier et al 2021; np.array
-    theta breakdown:
-    - K: RV semi-amplitude [cm/s]
-    - P: planet period [days]
-    - T0: mean transit time [day]
+        - K: RV semi-amplitude [cm/s]
+        - P: planet period [days]
+        - T0: mean transit time [day]
     
     Output:
     - Fisher Information Matrix: len(theta)xlen(theta) matrix; np.array
