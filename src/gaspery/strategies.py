@@ -19,12 +19,12 @@ from jax import grad, jit, vmap
 
 from gaspery import utils
 
-class Strategy: #(n_obs, cadence, start, offs=[], dropout=0.):
+class Strategy: 
     """
 
     Functions that make strategies, based on user inputs. 
 
-    Inputs:
+    Attributes:
     - n_obs: number of observations to make; this is a fixed goal [int]
     - cadence: amount of time between observations [days]
     - start: start time [BJD]
