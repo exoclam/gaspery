@@ -11,7 +11,7 @@ setup(
     description = 'Fisher Information-based radial velocity observation scheduling',
     license = 'MIT License'
     #install_requires = [
-    #    'celerite2',
+    #    'tinygp',
     #    'numpy'
     #]
 )

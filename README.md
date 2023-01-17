@@ -1,6 +1,22 @@
-### Using the Fisher Information Matrix (FIM) to evaluate different RV observing strategies
+### Gaspery is a package that uses the Fisher Information Matrix (FIM) to evaluate different radial velocity (RV) observing strategies
 
-A paper (Lam, Bedell & Zhao, in prep) will follow this work.
+It is currently only locally installable (run "pip install ." at the root gaspery/ directory), but will soon be on PyPI! A paper (Lam, Bedell & Zhao, in prep) will also follow this work.
+
+The Fisher Information Matrix describes the amount of information a time series contains on each free parameter input in a model. For exoplanet observers, the free parameter of interest is probably the RV semi-amplitude (sometimes called 'K'). Gaspery is intended to serve observational astronomers in their search for the observing strategy that maximizes information (or minimizes uncertainty) on K. However, one can maximize information on any free parameter from any model, given a time series support (x-axis). So, whether you want to extend gaspery to deal with more complex models or kernels, we are happy to field your suggestions on this repo's Git Issues!
+
+The directory layout is as follows: 
+
+#### Tutorials
+Start here for usecases! 
+
+##### min_observations.ipynb: Given a target, I want to find the minimum number of observations required to reach some threshold for the uncertainty on the RV semi-amplitude, K.
+
+##### fixed_budget.ipynb: Given a target AND a fixed allocation of observations, how do I best spend these observing nights to minimize the uncertainty on K? 
+
+
+#### src/gaspery
+Source code for the gaspery package.
+
 
 #### Notebooks
 These are where the functions in src/gaspery/ were developed and tested, as well as where figures were made for proposals, presentations, and the paper.
