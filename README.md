@@ -1,4 +1,4 @@
-### Gaspery (/gas.pər.ee/) https://user-images.githubusercontent.com/16911363/212937197-14b049b0-9c01-46cc-aec0-fc4c0e1dd0be.mp4
+### Gaspery (/gas.pər.ee/; [pronunciation guide](https://user-images.githubusercontent.com/16911363/212937197-14b049b0-9c01-46cc-aec0-fc4c0e1dd0be.mp4))
 
 Gaspery is a package that uses the Fisher Information Matrix (FIM) to evaluate different radial velocity (RV) observing strategies. It is currently only locally installable (run "pip install ." at the root gaspery/ directory), but will soon be on PyPI! A paper (Lam, Bedell & Zhao, in prep) will also follow this work.
 
