@@ -66,9 +66,9 @@ class Star(object):
         return params
 
 
-    def cov_matrix_general(self, t, kernel):
+    def cov_matrix_general(self, t, kernel=None):
         """
-        Build a covariance matrix that will be used in the calculation of the Fisher Information Matrix, using a generalized GP kernel.
+        Build a covariance matrix that will be used in the calculation of the Fisher Information Matrix, using a generalized GP kernel from the tinygp package.
         
         Inputs:
         - self: Star object
@@ -81,33 +81,25 @@ class Star(object):
         """
 
         # if we are in correlated noise regime, using a quasi-periodic Gaussian Process kernel
-        if all([self.sigma_wn_rv, self.Tau, self.eta, self.Prot, self.sigma_qp_rv]):
+        #if all([self.sigma_wn_rv, self.Tau, self.eta, self.Prot, self.sigma_qp_rv]):
+        if kernel != None:
             sigma_wn_rv, Tau, eta, Prot, sigma_qp_rv = self.sigma_wn_rv, self.Tau, self.eta, self.Prot, self.sigma_qp_rv
 
-            # create N by N matrix, where N is length of observations time series
-            k = jnp.zeros((len(t),len(t)))
-            #print("strat: ", t)
-            for i in range(len(t)):
-                for j in range(len(t)):
-                    term1 = jnp.exp(((t[i]-t[j])**2)/(2*Tau**2))
-                    term2 = kernel.evaluate(t[i], t[j])
-                    k = term1 * term2
-            
-            K = sigma_qp_rv**2 * k + sigma_wn_rv**2 * jnp.diag(np.ones(len(t)))
-            #print("shape: ", K.shape)
+            # build correlated noise part of the covariance matrix using the tinygp kernel and observation strategy
+            k = kernel(t, t)
+
+            # add white noise to generate the full covariance matrix
+            K = k + sigma_wn_rv**2 * jnp.diag(np.ones(len(t)))
             
             return K
 
-        # if we are in white noise regime
-        elif all([self.sigma_wn_rv]): 
+        # if we are in white noise regime exclusively
+        #elif all([self.sigma_wn_rv]): 
+        elif kernel == None:
             sigma_wn_rv = self.sigma_wn_rv**2 
             sigma = np.diag(sigma_wn_rv * np.ones(len(t)))
 
             return sigma
-
-        # else, we are not in a valid regime
-        else:
-            raise AttributeError('Please input at least sigma_wn_rv for photon noise.')
 
 
     def cov_matrix(self, t):
@@ -122,7 +114,10 @@ class Star(object):
         - N by N matrix of covariance elements following Equations 1 & 2 of Langellier et al 2020
         
         """
-            
+        
+        sigma_wn_rv = self.sigma_wn_rv**2 
+        white_noise = np.diag(sigma_wn_rv * np.ones(len(t)))
+
         # if we are in correlated noise regime, using a quasi-periodic Gaussian Process kernel
         if all([self.sigma_wn_rv, self.Tau, self.eta, self.Prot, self.sigma_qp_rv]):
             sigma_wn_rv, Tau, eta, Prot, sigma_qp_rv = self.sigma_wn_rv, self.Tau, self.eta, self.Prot, self.sigma_qp_rv
