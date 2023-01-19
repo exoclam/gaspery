@@ -2,11 +2,29 @@
 
 [Pronunciation Guide](https://user-images.githubusercontent.com/16911363/212941685-d887b375-176f-4c23-b011-5f6968028a33.mp4)
 
-Gaspery is a package that uses the Fisher Information Matrix (FIM) to evaluate different radial velocity (RV) observing strategies. It is currently only locally installable (run "pip install ." at the root gaspery/ directory), but will soon be on PyPI! A paper (Lam, Bedell & Zhao, in prep) will also follow this work.
+Gaspery is a package that uses the Fisher Information Matrix (FIM) to evaluate different radial velocity (RV) observing strategies. A paper (Lam, Bedell & Zhao, in prep) will also follow this work.
 
 The Fisher Information Matrix describes the amount of information a time series contains on each free parameter input in a model. For exoplanet observers, the free parameter of interest is probably the RV semi-amplitude (sometimes called 'K'). Gaspery is intended to serve observational astronomers in their search for the observing strategy that maximizes information (or minimizes uncertainty) on K. However, one can maximize information on any free parameter from any model, given a time series support (x-axis). So, whether you want to extend gaspery to deal with more complex models or kernels, we are happy to field your suggestions on this repo's Git Issues!
 
-The directory layout is as follows: 
+### Installation
+To install locally, run 
+```
+pip install .
+``` 
+at the root gaspery/ directory. 
+
+To install the latest PyPI distribution of gaspery, on Mac OS or Linux:
+```
+python3 -m venv some-env
+source some-env/bin/activate
+python3 -m pip install --index-url https://pypi.org/simple/ --no-deps gaspery
+```
+And on Windows:
+```
+py -m venv env
+.\env\Scripts\activate
+python3 -m pip install --index-url https://pypi.org/simple/ --no-deps gaspery
+```
 
 ### Tutorials
 Start here for usecases! 
