@@ -4,7 +4,7 @@
 
 Gaspery is a package that uses the Fisher Information Matrix (FIM) to evaluate different radial velocity (RV) observing strategies. A paper (Lam, Bedell & Zhao, in prep) will also follow this work.
 
-The Fisher Information Matrix describes the amount of information a time series contains on each free parameter input in a model. For exoplanet observers, the free parameter of interest is probably the RV semi-amplitude (sometimes called 'K'). Gaspery is intended to serve observational astronomers in their search for the observing strategy that maximizes information (or minimizes uncertainty) on K. However, one can maximize information on any free parameter from any model, given a time series support (x-axis). So, whether you want to extend gaspery to deal with more complex models or kernels, we are happy to field your suggestions on this repo's Git Issues!
+The Fisher Information Matrix describes the amount of information a time series contains on each free parameter input in a model. For exoplanet observers, the free parameter of interest is often the RV semi-amplitude, K. Gaspery is intended to help observational exoplanet astronomers construct the observing strategy that maximizes information (or minimizes uncertainty) on K. However, one can maximize information on any free parameter from any model, given a time series support (x-axis). So, whether you want to extend gaspery to deal with more complex models and problems or want integration with different covariance kernels (we are fully integrated with tinygp), we are happy to field your suggestions on this repo's Git Issues!
 
 ### Installation
 To install locally, run 
@@ -56,3 +56,7 @@ Notebooks are listed in order of chronological development. This is loosely what
 - au-mic.ipynb: real life example for the AU Mic system
 
 - eprv-abstract.ipynb: make cadences vs orbital period sensitivity map, but using latest JAX-enabled FI calculation
+
+
+### A note on the name
+Gaspery is a character from Emily St. John Mandel's Sea of Tranquility who travels throughout time, sampling different points in order to investigate the universe. 
