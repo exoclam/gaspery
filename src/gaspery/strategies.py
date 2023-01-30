@@ -86,6 +86,132 @@ class Strategy:
         return np.sort(random.sample(list(l),int(len(l)*(1-n))))
 
 
+    def build(self):
+        """
+        Build a time series of observations, given cadence, off nights, and n_obs.
+        Conservative, not greedy.
+
+        Input:
+        - Strategy object
+
+        Output:
+        - strat: time series of observations [np.array]
+
+        """
+
+        start = self.start
+        offs = self.offs
+        dropout = self.dropout
+        n_obs = self.n_obs
+        cadence = self.cadence
+
+        strat = []
+
+        n = 0
+        while len(strat) < n_obs:
+            next = start + n * cadence
+
+            if next in offs:
+                pass
+            else: 
+                strat.append(next)
+            
+            n += 1
+        
+        return np.array(strat)
+        
+
+    def gappy_greedy(self):
+        """
+        Specify how many nights in a row to observe and how many nights in a row to skip,
+        eg. input: {nights on, cadence, percentage of completed observations} 
+        
+        Input: 
+        - Strategy object
+        
+        Output:
+        - observation times: ndarray of floats
+        
+        """
+        
+        total_t = []
+        start = self.start
+        offs = self.offs
+        dropout = self.dropout
+        n_obs = self.n_obs
+        cadence = self.cadence 
+        n_tot = 0
+        n = 0
+
+        if len(offs) > 0:
+
+            # build runway
+            runway_end = start + len(offs) + n_obs * cadence
+            runway = np.linspace(start, runway_end, int(runway_end - start + 1))
+
+            # remove off nights
+            mask = [i for i in runway if i not in offs]
+
+            # keep making observations until you've reached your prescribed budget of observations
+            while n_tot < n_obs:
+
+                # allow for multiple spans of off nights
+                for off in offs:
+
+                    end = off
+
+                    # rearrange from end = start + n_obs * cadence to get on chunk
+                    n = int(np.ceil((end - start)/cadence))
+
+                    try: # if off != offs[-1]: # if there are yet more offs? 
+                        t = np.linspace(start, end, n, endpoint=False)
+
+                        # add jitter ~ N(0, 0.5 hr) to timestamps
+                        t += np.random.normal(0, 1./48)
+
+                        total_t = np.concatenate([total_t, t])
+                        n_remaining = n_obs - len(total_t)
+
+                        # set new start time as next available date
+                        start = offs[count+1] # this is wrong
+
+                    except: # if there aren't, then we just straight shot til n_obs is fulfilled
+                        #print("exception")
+                        end = start + n_remaining * cadence
+                        t = np.linspace(start, end, n_remaining, endpoint=False)
+
+                        # add jitter ~ N(0, 0.5 hr) to timestamps
+                        t += np.random.normal(0, 1./48)
+
+                        total_t = np.concatenate([total_t, t])
+
+                        # set new start time
+                        start = offs[count+1]
+
+                    n_tot = len(total_t)
+
+                    if n_tot >= n_obs:
+                        break
+
+                # let's say there's no more offs and yet more observations to make
+                # Then, we just straight shot til n_obs is fulfilled          
+
+            # pare down total_t if the last concatenation overshoots n_obs
+            # I have logic for dealing with that if I get through all off nights
+            # But n_obs gets hit before then, this is to take care of that.
+            n_extra = n_tot - n_obs
+            if n_extra > 0:
+                total_t = total_t[:-n_extra]
+        
+        else:
+            total_t = self.make_t()
+        
+        # dropout some observations based on dropout
+        total_t = Strategy.remove(total_t, dropout)
+        
+        return total_t
+
+
     def gappy(self):
         """
         Specify how many nights in a row to observe and how many nights in a row to skip,
