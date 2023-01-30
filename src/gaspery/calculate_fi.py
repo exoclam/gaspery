@@ -44,6 +44,16 @@ class Star(object):
         except:
             pass
 
+    """
+    def __init__(
+        self, sigma_wn_rv, kernel=None, **kwargs 
+    ):
+        self.sigma_wn_rv = sigma_wn_rv
+        try:
+            self.kernel
+        except:
+            pass
+    """
 
     def param_list(self):
         """

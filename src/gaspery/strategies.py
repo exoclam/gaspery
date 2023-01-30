@@ -90,6 +90,7 @@ class Strategy:
         """
         Build a time series of observations, given cadence, off nights, and n_obs.
         Conservative, not greedy.
+        Slower than gappy(), so default to gappy() when not using off nights.
 
         Input:
         - Strategy object
@@ -108,15 +109,22 @@ class Strategy:
         strat = []
 
         n = 0
-        while len(strat) < n_obs:
-            next = start + n * cadence
+        if len(offs) > 0:
+            while len(strat) < n_obs:
+                next = start + n * cadence
 
-            if next in offs:
-                pass
-            else: 
-                strat.append(next)
-            
-            n += 1
+                if next in offs:
+                    pass
+                else: 
+                    strat.append(next)
+                
+                n += 1
+        
+        elif len(offs) == 0:
+            strat = self.make_t()
+        
+        # dropout some observations based on dropout
+        total_t = Strategy.remove(strat, dropout)
         
         return np.array(strat)
         
