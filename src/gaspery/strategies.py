@@ -86,7 +86,7 @@ class Strategy:
         return np.sort(random.sample(list(l),int(len(l)*(1-n))))
 
 
-    def build(self):
+    def build(self, twice_flag=False):
         """
         Build a time series of observations, given cadence, off nights, and n_obs.
         Conservative, not greedy.
@@ -109,19 +109,48 @@ class Strategy:
         strat = []
 
         n = 0
-        if len(offs) > 0:
-            while len(strat) < n_obs:
-                next = start + n * cadence
 
-                if next in offs:
-                    pass
-                else: 
-                    strat.append(next)
-                
+        ### if I observe 2x per night, it's not as simple as adding 0.5 BJD
+        if twice_flag == True:
+            #print("For now, we are only doing 2x per day: 8pm local and 6am local")
+            morning = False
+            while len(strat) < n_obs:
+                if morning == False:
+                    next = start + n * cadence
+                    if next in offs:
+                        pass
+                    else: 
+                        strat.append(next)
+
+                morning = True
+                if morning == True:
+                    next = start + n * cadence + (5./12)
+                    if next in offs:
+                        pass
+                    else: 
+                        strat.append(next)
+
+                morning = False
+
                 n += 1
         
-        elif len(offs) == 0:
-            strat = self.make_t()
+        else:
+
+            ### if I have custom off nights
+            if len(offs) > 0:
+                while len(strat) < n_obs:
+                    next = start + n * cadence
+
+                    if next in offs:
+                        pass
+                    else: 
+                        strat.append(next)
+                    
+                    n += 1
+            
+            ### else
+            elif len(offs) == 0:
+                strat = self.make_t()
         
         # dropout some observations based on dropout
         total_t = Strategy.remove(strat, dropout)
