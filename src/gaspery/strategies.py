@@ -348,15 +348,14 @@ class Strategy:
         
         strat = []
         curr = start 
-        strat.append(curr)
 
         # for each on night, add another day as long as it's not in the offs list
         # then skip by off nights
         while len(strat) < n_obs:
             for i in range(on):
-                curr += 1
                 if curr not in offs:
                     strat.append(curr)
+                curr += 1
 
             curr += off
         
