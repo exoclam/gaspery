@@ -363,7 +363,7 @@ class Strategy:
             # off block
             curr += off
         
-        return strat
+        return np.array(strat)
 
 
     def on_vs_baseline_balanced(self, on, baseline, perfect_flag=False):
