@@ -352,11 +352,15 @@ class Strategy:
         # for each on night, add another day as long as it's not in the offs list
         # then skip by off nights
         while len(strat) < n_obs:
+            
+            # on block
             for i in range(on):
                 if curr not in offs:
-                    strat.append(curr)
+                    if len(strat) < n_obs:
+                        strat.append(curr)
                 curr += 1
 
+            # off block
             curr += off
         
         return strat
