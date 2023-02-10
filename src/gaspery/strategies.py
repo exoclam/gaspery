@@ -124,7 +124,7 @@ class Strategy:
 
                 morning = True
                 if morning == True:
-                    next = start + n * cadence + (5./12)
+                    next = start + n * cadence + (5./12) # add 10 hours 
                     if next in offs:
                         pass
                     else: 
@@ -327,7 +327,43 @@ class Strategy:
         return total_t
 
     
-    def on_vs_baseline_balanced(start, n_obs, on, baseline, perfect_flag=False):
+    def on_vs_off(self, on, off):
+        """
+        Construct observing strategy given on and off nights, plus n_obs and custom off nights.
+        Build time series bottom-up.
+        
+        Inputs: 
+        - self: Strategy object, including n_obs and start time/date
+        - on: number of consecutive nights of observation [days]
+        - off: number of nights to skip [days] (not to be confused with offs list)
+        
+        Returns: 
+        - strat: time series of dates of observations [list of floats]
+        
+        """
+        
+        start = self.start
+        n_obs = self.n_obs
+        offs = self.offs
+        
+        strat = []
+        curr = start 
+        strat.append(curr)
+
+        # for each on night, add another day as long as it's not in the offs list
+        # then skip by off nights
+        while len(strat) < n_obs:
+            for i in range(on):
+                curr += 1
+                if curr not in offs:
+                    strat.append(curr)
+
+            curr += off
+        
+        return strat
+
+
+    def on_vs_baseline_balanced(self, on, baseline, perfect_flag=False):
         """
         Construct observing strategy given on nights, baseline, and n_obs.
         Distribute on nights across time series while meeting the prescription.
@@ -345,6 +381,9 @@ class Strategy:
         
         """
         
+        start = self.start
+        n_obs = self.n_obs 
+
         temp_start = start
         
         n_on_periods = int(np.ceil(n_obs/on))
@@ -396,5 +435,7 @@ class Strategy:
         ons = [item for sublist in ons for item in sublist]
         
         return ons
+
+
 
 
