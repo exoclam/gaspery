@@ -94,6 +94,7 @@ class Strategy:
 
         Input:
         - Strategy object
+        - twice_flag: do we observe twice a day or not? [boolean]
 
         Output:
         - strat: time series of observations [np.array]
@@ -327,7 +328,7 @@ class Strategy:
         return total_t
 
     
-    def on_vs_off(self, on, off):
+    def on_vs_off(self, on, off, twice_flag=False):
         """
         Construct observing strategy given on and off nights, plus n_obs and custom off nights.
         Build time series bottom-up.
@@ -336,7 +337,8 @@ class Strategy:
         - self: Strategy object, including n_obs and start time/date
         - on: number of consecutive nights of observation [days]
         - off: number of nights to skip [days] (not to be confused with offs list)
-        
+        - twice_flag: do we observe twice a day or not? [boolean]
+
         Returns: 
         - strat: time series of dates of observations [list of floats]
         
@@ -351,17 +353,42 @@ class Strategy:
 
         # for each on night, add another day as long as it's not in the offs list
         # then skip by off nights
-        while len(strat) < n_obs:
-            
-            # on block
-            for i in range(on):
-                if curr not in offs:
-                    if len(strat) < n_obs:
-                        strat.append(curr)
-                curr += 1
+        if twice_flag==False:
+            while len(strat) < n_obs:
+                
+                # on block
+                for i in range(on):
+                    if curr not in offs:
+                        if len(strat) < n_obs:
+                            strat.append(curr)
+                    curr += 1
 
-            # off block
-            curr += off
+                # off block
+                curr += off
+
+        # if we observe twice a day
+        elif twice_flag==True:
+            # then we also need to include second part of evening in offs
+            offs = np.concatenate((np.array(offs), np.array(offs)+10/24))
+
+            while len(strat) < n_obs:
+                
+                # on block
+                for i in range(on):
+                    # first part of evening
+                    if curr not in offs:
+                        if len(strat) < n_obs:
+                            strat.append(curr)
+                    curr += 10./24
+
+                    # second part of evening
+                    if curr not in offs:
+                        if len(strat) < n_obs:
+                            strat.append(curr)
+                    curr += 14./24
+
+                # off block
+                curr += off
         
         return np.array(strat)
 
