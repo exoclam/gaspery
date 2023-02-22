@@ -358,9 +358,11 @@ class Strategy:
                 
                 # on block
                 for i in range(on):
-                    if curr not in offs:
-                        if len(strat) < n_obs:
-                            strat.append(curr)
+                    # check if in any off day
+                    for off in offs:
+                        if ~((curr >= off[0]) & (curr <= off[1])):
+                            if len(strat) < n_obs:
+                                strat.append(curr)
                     curr += 1
 
                 # off block
