@@ -26,7 +26,6 @@ class Strategy:
 
     Attributes:
     - n_obs: number of observations to make; this is a fixed goal [int]
-    - cadence: amount of time between observations [days]
     - start: start time [BJD]
     - offs: all pairs of off-night spans, described by their start/end times [list of two-element lists of floats]
     - dropout: percent of dropout due to weather and other uniformly distributed unfortunate events [float]
@@ -37,21 +36,21 @@ class Strategy:
     """
 
     def __init__(
-        self, n_obs, cadence, start, offs=[], dropout=0., **kwargs
+        self, n_obs, start, offs=[], dropout=0., **kwargs
     ):
         self.n_obs = n_obs
-        self.cadence = cadence
         self.start = start
         self.offs = offs
         self.dropout = dropout 
 
     
-    def make_t(self):
+    def make_t(self, cadence):
         """
         Generate observation times given a number of observations and an average cadence (every X nights)
         
         Input: 
         - Strategy object
+        - cadence: time between observations, in days [int]
         
         Output:
         - observation times: ndarray
@@ -59,7 +58,6 @@ class Strategy:
         """
         
         n_obs = self.n_obs
-        cadence = self.cadence
         start = self.start
 
         ### make a t using n_obs and cadence
@@ -86,7 +84,7 @@ class Strategy:
         return np.sort(random.sample(list(l),int(len(l)*(1-n))))
 
 
-    def build(self, twice_flag=False):
+    def build(self, cadence, twice_flag=False):
         """
         Build a time series of observations, given cadence, off nights, and n_obs.
         Conservative, not greedy.
@@ -94,6 +92,7 @@ class Strategy:
 
         Input:
         - Strategy object
+        - cadence: time between observations, in days [int]
         - twice_flag: do we observe twice a day or not? [boolean]
 
         Output:
@@ -105,7 +104,6 @@ class Strategy:
         offs = self.offs
         dropout = self.dropout
         n_obs = self.n_obs
-        cadence = self.cadence
 
         strat = []
 
@@ -151,7 +149,7 @@ class Strategy:
             
             ### else
             elif len(offs) == 0:
-                strat = self.make_t()
+                strat = self.make_t(cadence)
         
         # dropout some observations based on dropout
         total_t = Strategy.remove(strat, dropout)
@@ -159,14 +157,15 @@ class Strategy:
         return np.array(strat)
         
 
-    def gappy_greedy(self):
+    def gappy_greedy(self, cadence):
         """
         Specify how many nights in a row to observe and how many nights in a row to skip,
         eg. input: {nights on, cadence, percentage of completed observations} 
         
         Input: 
         - Strategy object
-        
+        - cadence: time between observations, in days [int]
+
         Output:
         - observation times: ndarray of floats
         
@@ -177,7 +176,6 @@ class Strategy:
         offs = self.offs
         dropout = self.dropout
         n_obs = self.n_obs
-        cadence = self.cadence 
         n_tot = 0
         n = 0
 
@@ -242,7 +240,7 @@ class Strategy:
                 total_t = total_t[:-n_extra]
         
         else:
-            total_t = self.make_t()
+            total_t = self.make_t(cadence)
         
         # dropout some observations based on dropout
         total_t = Strategy.remove(total_t, dropout)
@@ -250,14 +248,15 @@ class Strategy:
         return total_t
 
 
-    def gappy(self):
+    def gappy(self, cadence):
         """
         Specify how many nights in a row to observe and how many nights in a row to skip,
         eg. input: {nights on, cadence, percentage of completed observations} 
         
         Input: 
         - Strategy object
-        
+        - cadence: time between observations, in days [int]
+
         Output:
         - observation times: ndarray of floats
         
@@ -268,7 +267,6 @@ class Strategy:
         offs = self.offs
         dropout = self.dropout
         n_obs = self.n_obs
-        cadence = self.cadence 
         n_tot = 0
         n = 0
         
@@ -320,7 +318,7 @@ class Strategy:
                 total_t = total_t[:-n_extra]
         
         else:
-            total_t = self.make_t()
+            total_t = self.make_t(cadence)
         
         # dropout some observations based on dropout
         total_t = Strategy.remove(total_t, dropout)
@@ -328,7 +326,7 @@ class Strategy:
         return total_t
 
     
-    def on_vs_off(self, on, off, twice_flag=False):
+    def on_vs_off(self, on, off, twice_flag=False, hours=24):
         """
         Construct observing strategy given on and off nights, plus n_obs and custom off nights.
         Build time series bottom-up.
@@ -338,6 +336,7 @@ class Strategy:
         - on: number of consecutive nights of observation [days]
         - off: number of nights to skip [days] (not to be confused with offs list)
         - twice_flag: do we observe twice a day or not? [boolean]
+        - hours: number of hours between observations in a single night (applicable only if twice_flag=True) [float]
 
         Returns: 
         - strat: time series of dates of observations [list of floats]
@@ -347,6 +346,7 @@ class Strategy:
         start = self.start
         n_obs = self.n_obs
         offs = self.offs
+
         
         strat = []
         curr = start 
@@ -354,6 +354,30 @@ class Strategy:
         # for each on night, add another day as long as it's not in the offs list
         # then skip by off nights
         if twice_flag==False:
+
+            while len(strat) < n_obs:
+                
+                # on block
+                for i in range(on):
+                    
+                    # check if in any off day
+                    if len(offs) > 0:
+                        for off in offs:
+                            if ~((curr >= off[0]) & (curr <= off[1])):
+                                if len(strat) < n_obs:
+                                    strat.append(curr)
+
+                    elif len(offs) == 0:
+                        strat.append(curr)
+
+                    curr += 1
+
+                # off block
+                curr += off
+
+        # if we observe twice a day
+        elif twice_flag==True:
+
             while len(strat) < n_obs:
                 
                 # on block
@@ -363,31 +387,18 @@ class Strategy:
                         if ~((curr >= off[0]) & (curr <= off[1])):
                             if len(strat) < n_obs:
                                 strat.append(curr)
-                    curr += 1
+                    try:
+                        curr += hours/24
+                    except NameError:
+                        print("If you turn on the twice_flag, you need to set hours=N, where N is the number of hours between observations in the same night.")
 
-                # off block
-                curr += off
-
-        # if we observe twice a day
-        elif twice_flag==True:
-            # then we also need to include second part of evening in offs
-            offs = np.concatenate((np.array(offs), np.array(offs)+10/24))
-
-            while len(strat) < n_obs:
-                
-                # on block
-                for i in range(on):
-                    # first part of evening
-                    if curr not in offs:
-                        if len(strat) < n_obs:
-                            strat.append(curr)
-                    curr += 10./24
-
-                    # second part of evening
-                    if curr not in offs:
-                        if len(strat) < n_obs:
-                            strat.append(curr)
-                    curr += 14./24
+                    # observe for the second time that night
+                    for off in offs:
+                        if ~((curr >= off[0]) & (curr <= off[1])):
+                            if len(strat) < n_obs:
+                                strat.append(curr)
+                    # cycle back to same time of night the next day
+                    curr += (24-hours)/24
 
                 # off block
                 curr += off
