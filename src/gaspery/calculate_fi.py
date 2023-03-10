@@ -257,29 +257,80 @@ def clam_jax_fim(t, sigma, theta):
     Inputs: 
     - t: time series of length N observations; np.array [day]
     - sigma: RV measurement uncertainties associated with each observation; np.array of length N [cm/s]
-    - theta: planet orbital parameters; eg. [K, P, T0]; np.array
+    - theta: planet orbital parameters, if multi_flag=False; otherwise, list of thetas; np.array
         - K: RV semi-amplitude [cm/s]
         - P: planet period [days]
         - T0: mean transit time [day]
-    
+    - multi_flag: is the target a multi-planet system? [boolean]
+
     Output:
     - Fisher Information Matrix: len(theta)xlen(theta) matrix; np.array
     
     """
     
+    print(t, sigma, theta)
+
     def inner(params):
         return model_jax(t, params[0], params[1], params[2])
+
+    def inner_multi(params):
+        return model_jax_multi(t, params)
     
-    sigma += 1e-6 # add jitter
-    factor = jnp.linalg.solve(sigma, jnp.identity(len(sigma))) # take inverse of covariance matrix
-    #factor = jnp.linalg.inv(sigma)
-    #factor = jnp.where(sigma > 0, sigma_inv, 0)  
+    # add jitter
+    sigma += 1e-6 
+
+    # take inverse of covariance matrix
+    factor = jnp.linalg.solve(sigma, jnp.identity(len(sigma))) 
     
-    J = jax.jacobian(inner)(theta)
+    # calculate the Jacobian, depending on whether theta is a list of lists
+    if any(isinstance(i, list) for i in theta)==True:
+        J = jax.jacobian(inner_multi)(theta)
+    else:
+        J = jax.jacobian(inner)(theta)
+    
+    #J = jax.jacobian(inner_multi)(theta)
+
+    return J.T @ factor @ J
+
+
+@jax.jit
+def jax_fim(t, sigma, theta): 
+    """
+    Calculate the generalized Fisher Information Matrix using JAX Jacobian.
+    Generalizable to arbitrary parameters.
+    Now, with second term for correlated noise. 
+    
+    Inputs: 
+    - t: time series of length N observations; np.array [day]
+    - sigma: RV measurement uncertainties associated with each observation; np.array of length N [cm/s]
+    - theta: planet orbital parameters, if multi_flag=False; otherwise, list of thetas; np.array
+        - K: RV semi-amplitude [cm/s]
+        - P: planet period [days]
+        - T0: mean transit time [day]
+    - multi_flag: is the target a multi-planet system? [boolean]
+
+    Output:
+    - Fisher Information Matrix: len(theta)xlen(theta) matrix; np.array
+    
+    """
+
+    def inner_multi(params):
+        return model_jax_multi(t, params)
+    
+    # add jitter
+    sigma += 1e-6 
+
+    # take inverse of covariance matrix
+    factor = jnp.linalg.solve(sigma, jnp.identity(len(sigma))) 
+    
+    # calculate the Jacobian
+    J = jax.jacobian(inner_multi)(theta)
+    
     return J.T @ factor @ J
 
 
 def model_jax(t, K, P, T0): 
+
             """
             Radial velocity model, given timestamps and planetary orbital parameters, but JAXified
             (basically, np --> jnp)
@@ -290,9 +341,43 @@ def model_jax(t, K, P, T0):
             - P: planet period [days]
             - T0: mean transit time [day]
 
+            Returns: 
+            - rv: np.array of RV semi-amplitudes
+
             """
             
             arg = (2*jnp.pi/P)*(t-T0)
             rv = -K * jnp.sin(arg)
-            
+            print(len(rv))
+            print(np.array(rv)).shape
             return rv
+
+
+def model_jax_multi(t, thetas): 
+
+            """
+            JAX-enabled radial velocity model for multi-planet system
+            
+            Inputs: 
+            - t: time series of length N observations; np.array [day]
+            - thetas: list of lists of [K, P, T0], where:
+                - K: RV semi-amplitude [cm/s]
+                - P: planet period [days]
+                - T0: mean transit time [day]
+
+            Returns: 
+            - rv_total: np.array of RV semi-amplitudes
+
+            """
+            
+            rv_total = np.zeros(len(t))
+
+            for theta in thetas:
+                K, P, T0 = theta[0], theta[1], theta[2]
+                arg = (2*jnp.pi/P)*(t-T0)
+            
+                rv = -K * jnp.sin(arg)
+                rv_total += rv
+            print(len(rv_total))
+            print(np.array(rv_total).shape)
+            return rv_total
