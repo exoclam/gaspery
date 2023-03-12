@@ -2,6 +2,7 @@ import numpy as np
 import scipy
 import pandas as pd
 import random
+from itertools import chain
 import exoplanet
 import astropy 
 import pymc3
@@ -229,17 +230,13 @@ def cov_matrix_jax(t, sigma_wn_rv, params=[]):
                 term1 = ((t[i]-t[j])**2)/(2*Tau**2)
                 term2 = (1/(2*eta**2)) * (jnp.sin(jnp.pi * (t[i] - t[j])/Prot))**2
                 arg = -term1 - term2
-                #k[i][j] = jnp.exp(arg)
                 k = jnp.exp(arg)
-                #k = k.at[i]
-                #x = x.at[idx].set(y)
         
         K = sigma_qp_rv**2 * k + sigma_wn_rv**2 * jnp.diag(np.ones(len(t)))
-        #print("shape: ", K.shape)
         
         return K
 
-    # else, we are in white noise regime
+    # else, we are in strictly white noise regime
     elif len(params) == 0: 
         sigma_wn_rv = sigma_wn_rv**2 
         sigma = np.diag(sigma_wn_rv * np.ones(len(t)))
@@ -257,24 +254,18 @@ def clam_jax_fim(t, sigma, theta):
     Inputs: 
     - t: time series of length N observations; np.array [day]
     - sigma: RV measurement uncertainties associated with each observation; np.array of length N [cm/s]
-    - theta: planet orbital parameters, if multi_flag=False; otherwise, list of thetas; np.array
+    - theta: planet orbital parameters; must be flattened list if multiple planets; np.array
         - K: RV semi-amplitude [cm/s]
         - P: planet period [days]
         - T0: mean transit time [day]
-    - multi_flag: is the target a multi-planet system? [boolean]
 
     Output:
     - Fisher Information Matrix: len(theta)xlen(theta) matrix; np.array
     
     """
     
-    print(t, sigma, theta)
-
     def inner(params):
-        return model_jax(t, params[0], params[1], params[2])
-
-    def inner_multi(params):
-        return model_jax_multi(t, params)
+        return model_jax(t, params)
     
     # add jitter
     sigma += 1e-6 
@@ -282,75 +273,43 @@ def clam_jax_fim(t, sigma, theta):
     # take inverse of covariance matrix
     factor = jnp.linalg.solve(sigma, jnp.identity(len(sigma))) 
     
-    # calculate the Jacobian, depending on whether theta is a list of lists
-    if any(isinstance(i, list) for i in theta)==True:
-        J = jax.jacobian(inner_multi)(theta)
-    else:
-        J = jax.jacobian(inner)(theta)
-    
-    #J = jax.jacobian(inner_multi)(theta)
+    # calculate the Jacobian   
+    J = jax.jacobian(inner)(theta)
 
     return J.T @ factor @ J
 
 
-@jax.jit
-def jax_fim(t, sigma, theta): 
+def model_jax(t, flat_theta): 
+
     """
-    Calculate the generalized Fisher Information Matrix using JAX Jacobian.
-    Generalizable to arbitrary parameters.
-    Now, with second term for correlated noise. 
-    
+    JAX-enabled radial velocity model for multi-planet system.
+    Generalized to take flattened list of thetas of arbitrary number of planets.
+
     Inputs: 
     - t: time series of length N observations; np.array [day]
-    - sigma: RV measurement uncertainties associated with each observation; np.array of length N [cm/s]
-    - theta: planet orbital parameters, if multi_flag=False; otherwise, list of thetas; np.array
+    - flat_theta: flattened list of lists of [K, P, T0], where:
         - K: RV semi-amplitude [cm/s]
         - P: planet period [days]
         - T0: mean transit time [day]
-    - multi_flag: is the target a multi-planet system? [boolean]
 
-    Output:
-    - Fisher Information Matrix: len(theta)xlen(theta) matrix; np.array
-    
+    Returns: 
+    - rv_total: np.array of RV semi-amplitudes
+
     """
-
-    def inner_multi(params):
-        return model_jax_multi(t, params)
     
-    # add jitter
-    sigma += 1e-6 
-
-    # take inverse of covariance matrix
-    factor = jnp.linalg.solve(sigma, jnp.identity(len(sigma))) 
+    rv_total = np.zeros(len(t))
+    #flat_theta = list(chain.from_iterable(thetas))
     
-    # calculate the Jacobian
-    J = jax.jacobian(inner_multi)(theta)
-    
-    return J.T @ factor @ J
-
-
-def model_jax(t, K, P, T0): 
-
-            """
-            Radial velocity model, given timestamps and planetary orbital parameters, but JAXified
-            (basically, np --> jnp)
-            
-            Inputs: 
-            - t: time series of length N observations; np.array [day]
-            - K: RV semi-amplitude [cm/s]
-            - P: planet period [days]
-            - T0: mean transit time [day]
-
-            Returns: 
-            - rv: np.array of RV semi-amplitudes
-
-            """
-            
-            arg = (2*jnp.pi/P)*(t-T0)
-            rv = -K * jnp.sin(arg)
-            print(len(rv))
-            print(np.array(rv)).shape
-            return rv
+    counter = 0
+    while counter < len(flat_theta):  
+        K, P, T0 = flat_theta[counter], flat_theta[counter+1], flat_theta[counter+2]
+        arg = (2*jnp.pi/P)*(t-T0)
+        rv = -K * jnp.sin(arg)
+        rv_total += rv
+        
+        counter += 3
+        
+    return rv_total
 
 
 def model_jax_multi(t, thetas): 
