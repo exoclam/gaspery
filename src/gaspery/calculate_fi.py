@@ -312,31 +312,32 @@ def model_jax(t, flat_theta):
     return rv_total
 
 
-def model_jax_multi(t, thetas): 
+def model_jax_multi(t, theta): 
 
-            """
-            JAX-enabled radial velocity model for multi-planet system
-            
-            Inputs: 
-            - t: time series of length N observations; np.array [day]
-            - thetas: list of lists of [K, P, T0], where:
-                - K: RV semi-amplitude [cm/s]
-                - P: planet period [days]
-                - T0: mean transit time [day]
+    """
+    JAX-enabled radial velocity model for multi-planet system
+    For testing on multi-planet system to see if generalized function works correctly.
+    
+    Inputs: 
+    - t: time series of length N observations; np.array [day]
+    - thetas: list of lists of [K, P, T0], where:
+        - K: RV semi-amplitude [cm/s]
+        - P: planet period [days]
+        - T0: mean transit time [day]
 
-            Returns: 
-            - rv_total: np.array of RV semi-amplitudes
+    Returns: 
+    - rv_total: np.array of RV semi-amplitudes
 
-            """
-            
-            rv_total = np.zeros(len(t))
+    """
+    
+    K1, P1, T0_1, K2, P2, T0_2 = theta[0], theta[1], theta[2], theta[3], theta[4], theta[5]
+    
+    arg1 = (2*jnp.pi/P1)*(t-T0_1)
+    rv1 = -K1 * jnp.sin(arg1)
+    
+    arg2 = (2*jnp.pi/P2)*(t-T0_2)
+    rv2 = -K2 * jnp.sin(arg2)
 
-            for theta in thetas:
-                K, P, T0 = theta[0], theta[1], theta[2]
-                arg = (2*jnp.pi/P)*(t-T0)
-            
-                rv = -K * jnp.sin(arg)
-                rv_total += rv
-            print(len(rv_total))
-            print(np.array(rv_total).shape)
-            return rv_total
+    rv_total = rv1 + rv2
+    
+    return rv_total

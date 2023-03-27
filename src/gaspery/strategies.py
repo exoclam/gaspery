@@ -347,7 +347,6 @@ class Strategy:
         n_obs = self.n_obs
         offs = self.offs
 
-        
         strat = []
         curr = start 
 
@@ -359,7 +358,7 @@ class Strategy:
                 
                 # on block
                 for i in range(on):
-                    
+
                     # check if in any off day
                     if len(offs) > 0:
                         for off in offs:
@@ -382,24 +381,32 @@ class Strategy:
                 
                 # on block
                 for i in range(on):
-                    # check if in any off day
-                    for off in offs:
-                        if ~((curr >= off[0]) & (curr <= off[1])):
-                            if len(strat) < n_obs:
-                                strat.append(curr)
-                    try:
-                        curr += hours/24
-                    except NameError:
-                        print("If you turn on the twice_flag, you need to set hours=N, where N is the number of hours between observations in the same night.")
 
-                    # observe for the second time that night
-                    for off in offs:
-                        if ~((curr >= off[0]) & (curr <= off[1])):
-                            if len(strat) < n_obs:
-                                strat.append(curr)
-                    # cycle back to same time of night the next day
-                    curr += (24-hours)/24
+                    if len(offs) > 0: # if there are manual offs
 
+                        # check if in any off day
+                        for off in offs:
+                            if ~((curr >= off[0]) & (curr <= off[1])):
+                                if len(strat) < n_obs:
+                                    strat.append(curr)
+                        try:
+                            curr += hours/24
+                        except NameError:
+                            print("If you turn on the twice_flag, you need to set hours=N, where N is the number of hours between observations in the same night.")
+
+                        # observe for the second time that night
+                        for off in offs:
+                            if ~((curr >= off[0]) & (curr <= off[1])):
+                                if len(strat) < n_obs:
+                                    strat.append(curr)
+                        # cycle back to same time of night the next day
+                        curr += (24-hours)/24
+
+                    elif len(offs) == 0:
+                        strat.append(curr)
+                        curr += (24-hours)/24
+                        strat.append(curr)
+                        
                 # off block
                 curr += off
         
