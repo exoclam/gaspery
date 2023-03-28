@@ -33,6 +33,12 @@ Start here for usecases!
 
 - fixed_budget.ipynb: Given a target AND a fixed allocation of observations, how do I best spend these observing nights to minimize the uncertainty on K? 
 
+- beat_frequencies.ipynb: Given a host star, how do various combinations of planet orbital period and observing cadence interact to produce "beat frequencies" (contours of bad information content due to aliasing)?
+
+- companions.ipynb: Fixed budget, but with more than one planet in a system!
+
+- custom_kernels.ipynb: What if I want to swap out the quasi-periodic Gaussian Process kernel for something more specific to my science case? 
+
 
 ### Src/gaspery
 Source code for the gaspery package.
