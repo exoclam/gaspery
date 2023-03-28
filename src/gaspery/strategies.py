@@ -361,10 +361,11 @@ class Strategy:
 
                     # check if in any off day
                     if len(offs) > 0:
-                        for off in offs:
-                            if ~((curr >= off[0]) & (curr <= off[1])):
+                        for custom_off in offs:
+                            if ~((curr >= custom_off[0]) & (curr <= custom_off[1])):
                                 if len(strat) < n_obs:
                                     strat.append(curr)
+                                    break
 
                     elif len(offs) == 0:
                         strat.append(curr)
@@ -385,20 +386,23 @@ class Strategy:
                     if len(offs) > 0: # if there are manual offs
 
                         # check if in any off day
-                        for off in offs:
-                            if ~((curr >= off[0]) & (curr <= off[1])):
+                        for custom_off in offs:
+                            if ~((curr >= custom_off[0]) & (curr <= custom_off[1])):
                                 if len(strat) < n_obs:
                                     strat.append(curr)
+                                    break
                         try:
                             curr += hours/24
                         except NameError:
                             print("If you turn on the twice_flag, you need to set hours=N, where N is the number of hours between observations in the same night.")
 
                         # observe for the second time that night
-                        for off in offs:
-                            if ~((curr >= off[0]) & (curr <= off[1])):
+                        for custom_off in offs:
+                            if ~((curr >= custom_off[0]) & (curr <= custom_off[1])):
                                 if len(strat) < n_obs:
                                     strat.append(curr)
+                                    break
+                                
                         # cycle back to same time of night the next day
                         curr += (24-hours)/24
 
