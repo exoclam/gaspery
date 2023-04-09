@@ -2,11 +2,7 @@ import numpy as np
 import scipy
 import pandas as pd
 import random
-import exoplanet
 import astropy 
-import pymc3
-import pymc3_ext
-import celerite2
 from numpy.linalg import inv, det, solve, cond
 from tqdm import tqdm
 

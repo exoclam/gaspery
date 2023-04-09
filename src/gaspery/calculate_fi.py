@@ -3,11 +3,7 @@ import scipy
 import pandas as pd
 import random
 from itertools import chain
-import exoplanet
 import astropy 
-import pymc3
-import pymc3_ext
-import celerite2
 from tinygp import kernels, GaussianProcess
 from numpy.linalg import inv, det, solve, cond
 from tqdm import tqdm
