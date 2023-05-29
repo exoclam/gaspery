@@ -360,6 +360,7 @@ class Strategy:
                     if len(offs) > 0:
                         for custom_off in offs:
                             
+                            # if so, tag to don't include
                             if ((curr >= custom_off[0]) & (curr <= custom_off[1])):
                                 add = False
 
@@ -383,14 +384,20 @@ class Strategy:
                 # on block
                 for i in range(on):
 
+                    add = True
                     if len(offs) > 0: # if there are manual offs
 
                         # check if in any off day
                         for custom_off in offs:
-                            if ~((curr >= custom_off[0]) & (curr <= custom_off[1])):
-                                if len(strat) < n_obs:
-                                    strat.append(curr)
-                                    break
+
+                            # if so, tag to don't include
+                            if ((curr >= custom_off[0]) & (curr <= custom_off[1])):
+                                add = False
+
+                        if add == True:
+                            if len(strat) < n_obs:
+                                strat.append(curr)
+                                    
                         try:
                             curr += hours/24
                         except NameError:
@@ -398,10 +405,12 @@ class Strategy:
 
                         # observe for the second time that night
                         for custom_off in offs:
-                            if ~((curr >= custom_off[0]) & (curr <= custom_off[1])):
-                                if len(strat) < n_obs:
-                                    strat.append(curr)
-                                    break
+                            if ((curr >= custom_off[0]) & (curr <= custom_off[1])):
+                                add = False
+
+                        if add == True:    
+                            if len(strat) < n_obs:
+                                strat.append(curr)
                                 
                         # cycle back to same time of night the next day
                         curr += (24-hours)/24
