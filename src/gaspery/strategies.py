@@ -355,13 +355,17 @@ class Strategy:
                 # on block
                 for i in range(on):
 
+                    add = True
                     # check if in any off day
                     if len(offs) > 0:
                         for custom_off in offs:
-                            if ~((curr >= custom_off[0]) & (curr <= custom_off[1])):
-                                if len(strat) < n_obs:
-                                    strat.append(curr)
-                                    break
+                            
+                            if ((curr >= custom_off[0]) & (curr <= custom_off[1])):
+                                add = False
+
+                        if add == True:
+                            if len(strat) < n_obs:
+                                strat.append(curr)
 
                     elif len(offs) == 0:
                         strat.append(curr)
