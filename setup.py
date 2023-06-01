@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = "gaspery",
-    version = "0.2.1", 
+    version = "0.2.2", 
     #packages = find_packages(),
     packages = ['gaspery'],
     package_dir={"":"src"},
