@@ -369,7 +369,8 @@ class Strategy:
                                 strat.append(curr)
 
                     elif len(offs) == 0:
-                        strat.append(curr)
+                        if len(strat) < n_obs:
+                            strat.append(curr)
 
                     curr += 1
 
@@ -416,9 +417,11 @@ class Strategy:
                         curr += (24-hours)/24
 
                     elif len(offs) == 0:
-                        strat.append(curr)
-                        curr += (24-hours)/24
-                        strat.append(curr)
+                        if len(strat) < n_obs:
+                            strat.append(curr)
+                        if len(strat) < n_obs:
+                            curr += (24-hours)/24
+                            strat.append(curr)
                         
                 # off block
                 curr += off
