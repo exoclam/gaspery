@@ -39,6 +39,7 @@ Start here for usecases!
 
 - custom_kernels.ipynb: What if I want to swap out the quasi-periodic Gaussian Process kernel for something more specific to my science case? 
 
+- comparison_to_fits.ipynb: Demonstrate how well gaspery does compared to a fit on synthetic RV data, using AU Mic b. 
 
 ### Src/gaspery
 Source code for the gaspery package.
