@@ -81,10 +81,21 @@ res_injecteds = []
 # randomize start date/time, so that we are not subject to accidentally falling on an uninformative phase
 for i in range(10):
     ### strategy
+    """
     start_random = random_generator.uniform(start, start+p) 
     strategy = strategies.Strategy(n_obs = n_obs, start = start_random, offs=offs, dropout=0.)
-    grid_strat = np.array(strategy.on_vs_off(on=1, off=1, twice_flag=False)) # off=p-1 :(; off=1.115 :)
-    strat = grid_strat + random_perturbation.normal(0, 1./4, len(grid_strat)) # formerly spread of 1./6 
+    grid_strat = np.array(strategy.on_vs_off(on=1, off=p/2 - 1, twice_flag=False)) # off=p-1 :(; off=1.115 :)
+    strat = grid_strat + random_perturbation.normal(0, 1./12, len(grid_strat)) # formerly spread of 1./6 
+    """
+
+    ### strategy in quadrature
+    strategy = strategies.Strategy(n_obs = n_obs, start = start+2.115, offs=offs, dropout=0.)
+    grid_strat = np.array(strategy.on_vs_off(on=1, off=p/2 - 1, twice_flag=False))  # 1.115*2
+    strat = []
+    for s in grid_strat:
+        # draw three random times around each location of a trough or peak, with 2 hr spread
+        strat.append(random.normal(loc=s, scale=1/12, size=3))
+    strat = np.array(strat).ravel()
 
     ### fine grid for the MCMC
     # x_fine must pass through strat; this way, I can make it as fine as I want
