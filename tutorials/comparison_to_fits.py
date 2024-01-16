@@ -80,7 +80,7 @@ res_injecteds = []
 
 # randomize start date/time, so that we are not subject to accidentally falling on an uninformative phase
 for i in range(10):
-    ### strategy
+    ### strategy not in quadrature
     """
     start_random = random_generator.uniform(start, start+p) 
     strategy = strategies.Strategy(n_obs = n_obs, start = start_random, offs=offs, dropout=0.)
@@ -90,13 +90,14 @@ for i in range(10):
 
     ### strategy in quadrature
     strategy = strategies.Strategy(n_obs = n_obs, start = start+2.115, offs=offs, dropout=0.)
-    grid_strat = np.array(strategy.on_vs_off(on=1, off=p/2 - 1, twice_flag=False))  # 1.115*2
+    grid_strat = np.array(strategy.on_vs_off(on=1, off=p/2 - 1, twice_flag=False)) 
     strat = []
     for s in grid_strat:
         # draw three random times around each location of a trough or peak, with 2 hr spread
         strat.append(random.normal(loc=s, scale=1/12, size=3))
     strat = np.array(strat).ravel()
-
+    print("strat: ", strat)
+    
     ### fine grid for the MCMC
     # x_fine must pass through strat; this way, I can make it as fine as I want
     n = 10
@@ -252,9 +253,10 @@ for i in range(10):
     #print(res_injected)
 
 
-print("sigma_K from gaspery: ", np.mean(sigma_ks))#, np.percentile(sigma_ks, 16), np.percentile(sigma_ks, 50), np.percentile(sigma_ks, 84))
+print("sigma_K from gaspery: ", np.mean(sigma_ks), np.std(sigma_ks))#, np.percentile(sigma_ks, 16), np.percentile(sigma_ks, 50), np.percentile(sigma_ks, 84))
 print("sigma_K from MCMC: ", np.mean(sigma_ks_mcmc_median), np.mean(sigma_ks_mcmc_plus), np.mean(sigma_ks_mcmc_minus))
-
+print("sigmas for the sigma_Ks from MCMC: ", np.std(sigma_ks_mcmc_median), np.std(sigma_ks_mcmc_plus), np.std(sigma_ks_mcmc_minus))
+print("")
 print("training residual: ", np.mean(res_trainings))
 print("validation residuals: ", np.mean(res_injecteds))
 
