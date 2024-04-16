@@ -67,3 +67,10 @@ Notebooks are listed in order of chronological development. This is loosely what
 
 ### A note on the name
 Gaspery is a character from Emily St. John Mandel's Sea of Tranquility who travels throughout time, sampling different points in order to investigate the universe. 
+
+### There is a song about gaspery
+Natalia Guerrero ([art](https://www.nataliaguerreroart.com) and [code](https://github.com/namagu/)) and I wondered how one might represent the process of using gaspery in song. We produced the planet and star beats and then alternated between observing (machine-like as the telescope slews, panning from ear to ear as the stars go from horizon to horizon) and not observing (noodling on the piano, synthesizing, resting, creating). 
+
+[Song](https://github.com/exoclam/gaspery/assets/16911363/10fa8aea-f514-4e49-9865-ded7ccf9bbb3)
+
+
