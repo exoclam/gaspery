@@ -46,7 +46,7 @@ mean_params = {
 
 ### random seeds and initializing global variables
 random = np.random.default_rng(seed=4) # formerly seed of 4
-random_generator = np.random.default_rng(seed=4)
+#random_generator = np.random.default_rng(seed=4)
 random_perturbation = np.random.default_rng(seed=8)
 
 n_obs = 30
@@ -78,16 +78,43 @@ sigma_ks_mcmc_plus = []
 res_trainings = []
 res_injecteds = []
 
+# random generators
+random_generators = []
+random_seeds = np.arange(10)
+for i in range(10):
+    random_generators.append(np.random.default_rng(seed=random_seeds[i]))
+
+### fine parent grid for (most of the) ground truth data
+# the longest strategy we test here is observing every 5 days for 30 observations
+n = 10
+x_fine_all = np.around(np.linspace(start, start+29*5, int(((start+29*5) - start) * n ) + 1), 3)
+
+# strategy
+p_obs = 2 # every p_obs days
+interval = start + 29 * p_obs # for validation set
+
 # randomize start date/time, so that we are not subject to accidentally falling on an uninformative phase
 for i in range(10):
-    ### strategy not in quadrature
-    """
-    start_random = random_generator.uniform(start, start+p) 
-    strategy = strategies.Strategy(n_obs = n_obs, start = start_random, offs=offs, dropout=0.)
-    grid_strat = np.array(strategy.on_vs_off(on=1, off=p/2 - 1, twice_flag=False)) # off=p-1 :(; off=1.115 :)
-    strat = grid_strat + random_perturbation.normal(0, 1./12, len(grid_strat)) # formerly spread of 1./6 
-    """
+    #x_fine_all_perturbed = np.sort(np.unique(np.concatenate((x_fine_all, strat_perturbed))))
 
+    random_generator = random_generators[i]
+
+    ### strategy not in quadrature
+    #start_random = random_generator.uniform(start, start+p)
+    start_random = random_generator.choice(x_fine_all[x_fine_all <= start+p], 1)[0]
+    strategy = strategies.Strategy(n_obs = n_obs, start = start_random, offs=offs, dropout=0.)
+    #grid_strat = np.array(strategy.on_vs_off(on=1, off=p/2 - 1, twice_flag=False)) # off=p-1 :(; off=1.115 :)
+    grid_strat = np.around(np.array(strategy.on_vs_off(on=1, off=p_obs - 1, twice_flag=False)), 3)
+    print("grid strat: ", grid_strat)
+
+    ### I need to inject time stamps for the perturbed strategy to fold into the ground truth
+    strat_perturbed = grid_strat + random_generator.normal(0, 1./12, len(grid_strat)) # formerly spread of 1./6 
+
+    ### just for the perturbed strategy; otherwise, comment out! 
+    #grid_strat = strat_perturbed 
+    #x_fine_all_perturbed = np.unique(np.concatenate((x_fine_all, strat_perturbed)))
+
+    """
     ### strategy in quadrature
     strategy = strategies.Strategy(n_obs = n_obs, start = start+2.115, offs=offs, dropout=0.)
     grid_strat = np.array(strategy.on_vs_off(on=1, off=p/2 - 1, twice_flag=False)) 
@@ -95,32 +122,30 @@ for i in range(10):
     for s in grid_strat:
         # draw three random times around each location of a trough or peak, with 2 hr spread
         strat.append(random.normal(loc=s, scale=1/12, size=3))
-    strat = np.array(strat).ravel()
-    print("strat: ", strat)
-    
-    ### fine grid for the MCMC
-    # x_fine must pass through strat; this way, I can make it as fine as I want
-    n = 10
-    x_fine = np.linspace(grid_strat[0], grid_strat[-1], int((grid_strat[-1] - grid_strat[0]) * n ) + 1)
+    grid_strat = np.array(strat).ravel()
+    print("strat: ", grid_strat)
+    """
 
-    # build x_fine as intrinsically random; concatenate strategy to x_fine
-    x_fine = np.concatenate((x_fine, strat))
-    x_fine = np.sort(x_fine)
+    # if I compare against a perturbed strategy, it's only fair to include those extra times in the ground truth times
+    x_fine_all_perturbed = np.sort(np.unique(np.concatenate((x_fine_all, strat_perturbed)))) # strat_perturbed vs grid_strat
+
+    x_fine_all_perturbed_prediction = x_fine_all_perturbed[x_fine_all_perturbed <= interval]
 
     ### generate fake ground truth and validation set
-    planet_fine = calculate_fi.model_jax(x_fine, [theta[0], theta[1], theta[2]])
-    gp_fine = GaussianProcess(kernel, x_fine) 
-    star_fine = gp_fine.sample(jax.random.PRNGKey(4), shape=(1,)) 
+    planet_fine = calculate_fi.model_jax(x_fine_all_perturbed, [theta[0], theta[1], theta[2]])
+    gp_fine = GaussianProcess(kernel, x_fine_all_perturbed) 
+    star_fine = gp_fine.sample(jax.random.PRNGKey(random_seeds[i]), shape=(1,)) 
     observed_fine = star_fine + planet_fine + random.normal(0, sigma_wn_rv, len(planet_fine))
 
     # assemble parent DataFrame, and split into training and validation sets
-    df_fine = pd.DataFrame({'x': x_fine, 'y': observed_fine[0], 
-                                'planet': planet_fine, 'star': star_fine[0]})
+    df_fine = pd.DataFrame({'x': x_fine_all_perturbed, 'y': observed_fine[0], 
+                            'planet': planet_fine, 'star': star_fine[0]})
     df_fine = df_fine.drop_duplicates(subset=['x'])
+    #print("df fine:", df_fine)
 
-    not_injected = df_fine.loc[df_fine.x.isin(strat)]
+    not_injected = df_fine.loc[df_fine.x.isin(strat_perturbed)] # grid_strat
 
-    injected_x = random.choice(x_fine, 30, replace=False)
+    injected_x = random_generator.choice(x_fine_all_perturbed_prediction, 30, replace=False)
 
     injected = df_fine.loc[df_fine.x.isin(injected_x)]
 
@@ -131,10 +156,10 @@ for i in range(10):
 
     #strat = np.array(strategy.on_vs_off(on=1, off=0, twice_flag=False))
     # calculate covariance matrix
-    sigma = star.cov_matrix_general(strat, kernel)
+    sigma = star.cov_matrix_general(np.array(not_injected.x), kernel)
 
     # populate arguments for Fisher Info calculator
-    args = np.array(strat), sigma, jnp.array(theta, dtype=float)
+    args = np.array(grid_strat), sigma, jnp.array(theta, dtype=float)
 
     # calculate FI
     fim = calculate_fi.clam_jax_fim(*args).block_until_ready()
@@ -167,7 +192,7 @@ for i in range(10):
         
         # sample hyperparameters for planet mean model
         p = numpyro.sample("P", dist.Normal(p, 0.00004)) 
-        K = numpyro.sample("K", dist.TruncatedNormal(0., 100., low=0.)) # formerly K, 2.25, but that's too informative
+        K = numpyro.sample("K", dist.TruncatedNormal(10., 5., low=0.)) # formerly K, 2.25, but that's too informative
         #K = numpyro.sample("K", dist.Uniform(0., 100.))
         T0 = numpyro.sample("T0", dist.Normal(T0, 1))
         mean_params = {"K": K, "P": p, "T0": T0}
@@ -183,6 +208,7 @@ for i in range(10):
         
         numpyro.sample("gp", gp.numpyro_dist(), obs=y)
         
+        """
         if y is not None:
             # condition on y; evaluate on these three different time vectors
             numpyro.deterministic("pred", gp.condition(y, t).gp.loc) # evaluate on each strat time 
@@ -193,6 +219,23 @@ for i in range(10):
             numpyro.deterministic("pred-star", gp.condition(y, t, include_mean=False).gp.loc) 
             numpyro.deterministic("pred-plot-star", gp.condition(y, t_fine, include_mean=False).gp.loc) 
             numpyro.deterministic("inj-rec-star", gp.condition(y, injected_x, include_mean=False).gp.loc) 
+        """
+
+        planet_pred = jax.vmap(gp.mean_function)(t)
+        star_pred = gp.condition(y, t, include_mean=False).gp.loc
+        numpyro.deterministic("pred", star_pred + planet_pred)
+        numpyro.deterministic("pred-star", star_pred)
+
+        planet_pred_plot = jax.vmap(gp.mean_function)(t_fine)
+        star_pred_plot = gp.condition(y, t_fine, include_mean=False).gp.loc
+        numpyro.deterministic("pred-plot", star_pred_plot + planet_pred_plot)
+        numpyro.deterministic("pred-plot-star", star_pred_plot)
+
+        planet_pred_inj = jax.vmap(gp.mean_function)(injected_x)
+        star_pred_inj = gp.condition(y, injected_x, include_mean=False).gp.loc
+        numpyro.deterministic("inj-rec", star_pred_inj + planet_pred_inj)
+        numpyro.deterministic("inj-rec-star", star_pred_inj)
+
 
     nuts_kernel = NUTS(numpyro_model, dense_mass=True, target_accept_prob=0.9)
     mcmc = MCMC(
@@ -203,6 +246,12 @@ for i in range(10):
         progress_bar=True,
     )
     rng_key = jax.random.PRNGKey(34923)
+
+    ### fine grid for the MCMC prediction (t_fine)
+    #x_fine = np.linspace(start, start+29*5, int((start+29*5 - start) * n ) + 1)
+    # build x_fine as intrinsically random; concatenate strategy to x_fine
+    #x_fine = np.sort(np.unique(np.concatenate((x_fine, grid_strat))))
+    x_fine = x_fine_all_perturbed_prediction
 
     # run MCMC
     gp_output = mcmc.run(rng_key, t=np.array(not_injected.x), y=np.array(not_injected.y), yerr=sigma_wn_rv, # X, y vs t_plot, y_plot
@@ -233,6 +282,8 @@ for i in range(10):
     #print(np.percentile(data.posterior.data_vars['K'], 50))
 
     # combined residuals 
+    print("not_injected.y: ", not_injected.y)
+    print("q[1]: ", q[1])
     res_injected = injected.y - q_inj[1]
     res_training = not_injected.y - q[1]
     res_trainings.append(np.std(res_training))
@@ -253,12 +304,12 @@ for i in range(10):
     #print(res_injected)
 
 
-print("sigma_K from gaspery: ", np.mean(sigma_ks), np.std(sigma_ks))#, np.percentile(sigma_ks, 16), np.percentile(sigma_ks, 50), np.percentile(sigma_ks, 84))
-print("sigma_K from MCMC: ", np.mean(sigma_ks_mcmc_median), np.mean(sigma_ks_mcmc_plus), np.mean(sigma_ks_mcmc_minus))
+print("sigma_K from gaspery: ", np.median(sigma_ks), np.std(sigma_ks))#, np.percentile(sigma_ks, 16), np.percentile(sigma_ks, 50), np.percentile(sigma_ks, 84))
+print("sigma_K from MCMC: ", np.median(sigma_ks_mcmc_median), np.median(sigma_ks_mcmc_plus), np.median(sigma_ks_mcmc_minus))
 print("sigmas for the sigma_Ks from MCMC: ", np.std(sigma_ks_mcmc_median), np.std(sigma_ks_mcmc_plus), np.std(sigma_ks_mcmc_minus))
 print("")
-print("training residual: ", np.mean(res_trainings))
-print("validation residuals: ", np.mean(res_injecteds))
+print("training residual: ", np.median(res_trainings))
+print("validation residuals: ", np.median(res_injecteds))
 
 #plt.errorbar(np.array(injected.x), res_injected, yerr, fmt=".k", capsize=0, label='injected combined', color='r')
 #plt.errorbar(np.array(not_injected.x), res_training, yerr, fmt=".k", capsize=0, label='training combined', color='k')
