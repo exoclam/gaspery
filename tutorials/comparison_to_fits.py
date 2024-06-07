@@ -75,8 +75,12 @@ sigma_ks_mcmc_minus = []
 sigma_ks_mcmc_median = []
 sigma_ks_mcmc_plus = []
 
-res_trainings = []
-res_injecteds = []
+res_trainings_mean = []
+res_injecteds_mean = []
+res_trainings_median = []
+res_injecteds_median = []
+res_trainings_std = []
+res_injecteds_std = []
 
 # random generators
 random_generators = []
@@ -90,14 +94,15 @@ n = 10
 x_fine_all = np.around(np.linspace(start, start+29*5, int(((start+29*5) - start) * n ) + 1), 3)
 
 # strategy
-p_obs = 2 # every p_obs days
-interval = start + 29 * p_obs # for validation set
+p_obs = 5 # every p_obs days
+interval = start + 30 * p_obs # for validation set
 
 # randomize start date/time, so that we are not subject to accidentally falling on an uninformative phase
 for i in range(10):
     #x_fine_all_perturbed = np.sort(np.unique(np.concatenate((x_fine_all, strat_perturbed))))
-
-    random_generator = random_generators[i]
+    random_seed = i
+    print(random_seed)
+    random_generator = np.random.default_rng(seed=random_seed) #random_generators[random_seed]
 
     ### strategy not in quadrature
     #start_random = random_generator.uniform(start, start+p)
@@ -109,6 +114,7 @@ for i in range(10):
 
     ### I need to inject time stamps for the perturbed strategy to fold into the ground truth
     strat_perturbed = grid_strat + random_generator.normal(0, 1./12, len(grid_strat)) # formerly spread of 1./6 
+    #print("strat perturbed: ", strat_perturbed)
 
     ### just for the perturbed strategy; otherwise, comment out! 
     #grid_strat = strat_perturbed 
@@ -134,8 +140,12 @@ for i in range(10):
     ### generate fake ground truth and validation set
     planet_fine = calculate_fi.model_jax(x_fine_all_perturbed, [theta[0], theta[1], theta[2]])
     gp_fine = GaussianProcess(kernel, x_fine_all_perturbed) 
-    star_fine = gp_fine.sample(jax.random.PRNGKey(random_seeds[i]), shape=(1,)) 
-    observed_fine = star_fine + planet_fine + random.normal(0, sigma_wn_rv, len(planet_fine))
+    star_fine = gp_fine.sample(jax.random.PRNGKey(random_seed), shape=(1,)) 
+    observed_fine = star_fine + planet_fine + random_generator.normal(0, sigma_wn_rv, len(planet_fine))
+
+    #print(planet_fine)
+    #print(star_fine[0])
+    #print(observed_fine[0])
 
     # assemble parent DataFrame, and split into training and validation sets
     df_fine = pd.DataFrame({'x': x_fine_all_perturbed, 'y': observed_fine[0], 
@@ -143,7 +153,7 @@ for i in range(10):
     df_fine = df_fine.drop_duplicates(subset=['x'])
     #print("df fine:", df_fine)
 
-    not_injected = df_fine.loc[df_fine.x.isin(strat_perturbed)] # grid_strat
+    not_injected = df_fine.loc[df_fine.x.isin(grid_strat)] # grid_strat vs strat_perturbed
 
     injected_x = random_generator.choice(x_fine_all_perturbed_prediction, 30, replace=False)
 
@@ -159,7 +169,7 @@ for i in range(10):
     sigma = star.cov_matrix_general(np.array(not_injected.x), kernel)
 
     # populate arguments for Fisher Info calculator
-    args = np.array(grid_strat), sigma, jnp.array(theta, dtype=float)
+    args = np.array(not_injected.x), sigma, jnp.array(theta, dtype=float)
 
     # calculate FI
     fim = calculate_fi.clam_jax_fim(*args).block_until_ready()
@@ -171,7 +181,6 @@ for i in range(10):
     sigma_k = np.sqrt(inv_fim)[0][0]
     #print("start: ", start_random, "expected value of uncertainty on K: ", sigma_k, " m/s")
     sigma_ks.append(sigma_k)
-
 
     ### MCMC sampling
     def numpyro_model(t, y, yerr, hyperparams, theta, injected_x, not_injected_x, t_fine):        
@@ -194,7 +203,7 @@ for i in range(10):
         p = numpyro.sample("P", dist.Normal(p, 0.00004)) 
         K = numpyro.sample("K", dist.TruncatedNormal(10., 5., low=0.)) # formerly K, 2.25, but that's too informative
         #K = numpyro.sample("K", dist.Uniform(0., 100.))
-        T0 = numpyro.sample("T0", dist.Normal(T0, 1))
+        T0 = numpyro.sample("T0", dist.Normal(T0, 0.04)) # 1 vs 0.0005 vs 0.04 (1 hour)
         mean_params = {"K": K, "P": p, "T0": T0}
             
         def mean_function(t):
@@ -235,7 +244,6 @@ for i in range(10):
         star_pred_inj = gp.condition(y, injected_x, include_mean=False).gp.loc
         numpyro.deterministic("inj-rec", star_pred_inj + planet_pred_inj)
         numpyro.deterministic("inj-rec-star", star_pred_inj)
-
 
     nuts_kernel = NUTS(numpyro_model, dense_mass=True, target_accept_prob=0.9)
     mcmc = MCMC(
@@ -286,8 +294,12 @@ for i in range(10):
     print("q[1]: ", q[1])
     res_injected = injected.y - q_inj[1]
     res_training = not_injected.y - q[1]
-    res_trainings.append(np.std(res_training))
-    res_injecteds.append(np.std(res_injected))
+    res_trainings_std.append(np.std(res_training))
+    res_injecteds_std.append(np.std(res_injected))
+    res_trainings_mean.append(np.mean(res_training))
+    res_injecteds_mean.append(np.mean(res_injected))
+    res_trainings_median.append(np.median(res_training))
+    res_injecteds_median.append(np.median(res_injected))
 
     #plt.scatter(injected.x, injected.y)
     #plt.scatter(not_injected.x, not_injected.y)
@@ -303,13 +315,31 @@ for i in range(10):
 
     #print(res_injected)
 
+    print("")
+    #print("sigma_k difference: ", np.abs(sigma_k - 1.3))
+    print("K difference: ", np.percentile(data.posterior.data_vars['K'], 50) - 8.5)
+    print("training residuals: ", res_training)
+    print("training residual median: ", np.median(np.abs(res_training)))
+    print("training residual spread: ", np.std(np.abs(res_training)))
+    print("validation residuals: ", res_injected)
+    print("validation residual median :", np.median(np.abs(res_injected)))
+    print("validation residual spread: ", np.std(np.abs(res_injected)))
+    print("")
 
-print("sigma_K from gaspery: ", np.median(sigma_ks), np.std(sigma_ks))#, np.percentile(sigma_ks, 16), np.percentile(sigma_ks, 50), np.percentile(sigma_ks, 84))
-print("sigma_K from MCMC: ", np.median(sigma_ks_mcmc_median), np.median(sigma_ks_mcmc_plus), np.median(sigma_ks_mcmc_minus))
+print("Ks from MCMC:", np.around(sigma_ks_mcmc_median,2))
+#print("training residuals: ", np.around(res_trainings,2))
+#print("validation residuals: ", np.around(res_injecteds,2))
+
+print("sigma_K from gaspery: ", np.mean(sigma_ks), np.std(sigma_ks))#, np.percentile(sigma_ks, 16), np.percentile(sigma_ks, 50), np.percentile(sigma_ks, 84))
+print("sigma_K from MCMC: ", np.mean(sigma_ks_mcmc_median), np.mean(sigma_ks_mcmc_plus), np.mean(sigma_ks_mcmc_minus))
 print("sigmas for the sigma_Ks from MCMC: ", np.std(sigma_ks_mcmc_median), np.std(sigma_ks_mcmc_plus), np.std(sigma_ks_mcmc_minus))
 print("")
-print("training residual: ", np.median(res_trainings))
-print("validation residuals: ", np.median(res_injecteds))
+print("training residual mean: ", np.mean(res_trainings_mean))
+print("validation residual mean: ", np.mean(res_injecteds_mean))
+print("training residual median: ", np.mean(res_trainings_median))
+print("validation residual median: ", np.mean(res_injecteds_median))
+print("training residual spread: ", np.mean(res_trainings_std))
+print("validation residual spread: ", np.mean(res_injecteds_std))
 
 #plt.errorbar(np.array(injected.x), res_injected, yerr, fmt=".k", capsize=0, label='injected combined', color='r')
 #plt.errorbar(np.array(not_injected.x), res_training, yerr, fmt=".k", capsize=0, label='training combined', color='k')
