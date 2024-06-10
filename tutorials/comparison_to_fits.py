@@ -57,7 +57,7 @@ offs = []
 sigma_wn_rv = 5.
 sigma_qp_rv = 47. #145 #47
 Prot = 4.86
-Tau = 110. # 30, 110
+Tau = 100. # 30, 110
 eta = 0.37
 yerr = sigma_wn_rv
 
@@ -102,6 +102,7 @@ for i in range(10):
     #x_fine_all_perturbed = np.sort(np.unique(np.concatenate((x_fine_all, strat_perturbed))))
     random_seed = i
     print(random_seed)
+
     random_generator = np.random.default_rng(seed=random_seed) #random_generators[random_seed]
 
     ### strategy not in quadrature
@@ -120,20 +121,25 @@ for i in range(10):
     #grid_strat = strat_perturbed 
     #x_fine_all_perturbed = np.unique(np.concatenate((x_fine_all, strat_perturbed)))
 
-    """
+    #"""
     ### strategy in quadrature
     strategy = strategies.Strategy(n_obs = n_obs, start = start+2.115, offs=offs, dropout=0.)
     grid_strat = np.array(strategy.on_vs_off(on=1, off=p/2 - 1, twice_flag=False)) 
+    grid_strat = grid_strat[:10]
     strat = []
     for s in grid_strat:
         # draw three random times around each location of a trough or peak, with 2 hr spread
-        strat.append(random.normal(loc=s, scale=1/12, size=3))
-    grid_strat = np.array(strat).ravel()
+        strat.append(random_generator.normal(loc=s, scale=1/12, size=3))
+    grid_strat = np.sort(np.array(strat).ravel())
     print("strat: ", grid_strat)
-    """
 
-    # if I compare against a perturbed strategy, it's only fair to include those extra times in the ground truth times
-    x_fine_all_perturbed = np.sort(np.unique(np.concatenate((x_fine_all, strat_perturbed)))) # strat_perturbed vs grid_strat
+    strat_perturbed = grid_strat + random_generator.normal(0, 1./12, len(grid_strat))
+    #"""
+
+    ### if I compare against a perturbed strategy, it's only fair to include those extra times in the ground truth times
+    x_fine_all_perturbed = np.sort(np.unique(np.concatenate((x_fine_all, strat_perturbed, grid_strat)))) # strat_perturbed vs grid_strat
+    ### comment out the previous line and run this line if the strategy is in-quadrature
+    #x_fine_all_perturbed = np.sort(np.unique(np.concatenate((x_fine_all, grid_strat))))
 
     x_fine_all_perturbed_prediction = x_fine_all_perturbed[x_fine_all_perturbed <= interval]
 
@@ -147,13 +153,13 @@ for i in range(10):
     #print(star_fine[0])
     #print(observed_fine[0])
 
-    # assemble parent DataFrame, and split into training and validation sets
+    ### assemble parent DataFrame, and split into training and validation sets
     df_fine = pd.DataFrame({'x': x_fine_all_perturbed, 'y': observed_fine[0], 
                             'planet': planet_fine, 'star': star_fine[0]})
     df_fine = df_fine.drop_duplicates(subset=['x'])
     #print("df fine:", df_fine)
 
-    not_injected = df_fine.loc[df_fine.x.isin(grid_strat)] # grid_strat vs strat_perturbed
+    not_injected = df_fine.loc[df_fine.x.isin(strat_perturbed)] # grid_strat vs strat_perturbed
 
     injected_x = random_generator.choice(x_fine_all_perturbed_prediction, 30, replace=False)
 
@@ -201,7 +207,7 @@ for i in range(10):
         
         # sample hyperparameters for planet mean model
         p = numpyro.sample("P", dist.Normal(p, 0.00004)) 
-        K = numpyro.sample("K", dist.TruncatedNormal(10., 5., low=0.)) # formerly K, 2.25, but that's too informative
+        K = numpyro.sample("K", dist.TruncatedNormal(10., 20., low=0.)) # formerly K, 2.25, but that's too informative
         #K = numpyro.sample("K", dist.Uniform(0., 100.))
         T0 = numpyro.sample("T0", dist.Normal(T0, 0.04)) # 1 vs 0.0005 vs 0.04 (1 hour)
         mean_params = {"K": K, "P": p, "T0": T0}
@@ -248,8 +254,8 @@ for i in range(10):
     nuts_kernel = NUTS(numpyro_model, dense_mass=True, target_accept_prob=0.9)
     mcmc = MCMC(
         nuts_kernel,
-        num_warmup=1000, # 1000
-        num_samples=8000, # 5000
+        num_warmup=2000, # 1000
+        num_samples=10000, # 5000
         num_chains=2,
         progress_bar=True,
     )
@@ -280,6 +286,9 @@ for i in range(10):
     sigma_ks_mcmc_plus.append(np.percentile(data.posterior.data_vars['K'], 84) - np.percentile(data.posterior.data_vars['K'], 50))
     sigma_ks_mcmc_minus.append(np.percentile(data.posterior.data_vars['K'], 50) - np.percentile(data.posterior.data_vars['K'], 16))
     sigma_ks_mcmc_median.append(np.percentile(data.posterior.data_vars['K'], 50))
+
+    ### did it converge? 
+    print("run summary: ", az.summary(data, var_names=['K', 'P', 'T0']))
 
     ### residuals
     q = np.percentile(preds, [16, 50, 84], axis=0)

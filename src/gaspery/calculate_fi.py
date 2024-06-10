@@ -104,7 +104,7 @@ class Star(object):
         #elif all([self.sigma_wn_rv]): 
         elif kernel == None:
             sigma_wn_rv = self.sigma_wn_rv**2 
-            sigma = np.diag(sigma_wn_rv * np.ones(len(t)))
+            sigma = jnp.diag(sigma_wn_rv * jnp.ones(len(t)))
 
             return sigma
 
