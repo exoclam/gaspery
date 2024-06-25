@@ -16,7 +16,7 @@ import numpyro
 import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS
 
-path = '/Users/chris/Desktop/gaspery/'
+path = '/Users/chrislam/Desktop/gaspery/'
 path = '/blue/sarahballard/c.lam/gaspery/'
 
 import matplotlib.pylab as pylab
@@ -82,6 +82,9 @@ res_injecteds_median = []
 res_trainings_std = []
 res_injecteds_std = []
 
+res_trainings_std_star = []
+res_injecteds_std_star = []
+
 # random generators
 random_generators = []
 random_seeds = np.arange(10)
@@ -94,7 +97,7 @@ n = 10
 x_fine_all = np.around(np.linspace(start, start+29*5, int(((start+29*5) - start) * n ) + 1), 3)
 
 # strategy
-p_obs = 5 # every p_obs days
+p_obs = 4.7 # every p_obs days
 interval = start + 30 * p_obs # for validation set
 
 # randomize start date/time, so that we are not subject to accidentally falling on an uninformative phase
@@ -121,20 +124,20 @@ for i in range(10):
     #grid_strat = strat_perturbed 
     #x_fine_all_perturbed = np.unique(np.concatenate((x_fine_all, strat_perturbed)))
 
-    #"""
+    """
     ### strategy in quadrature
     strategy = strategies.Strategy(n_obs = n_obs, start = start+2.115, offs=offs, dropout=0.)
     grid_strat = np.array(strategy.on_vs_off(on=1, off=p/2 - 1, twice_flag=False)) 
-    grid_strat = grid_strat[:10]
+    #grid_strat = grid_strat[:10]
     strat = []
     for s in grid_strat:
         # draw three random times around each location of a trough or peak, with 2 hr spread
-        strat.append(random_generator.normal(loc=s, scale=1/12, size=3))
+        strat.append(random_generator.normal(loc=s, scale=1/12, size=1))
     grid_strat = np.sort(np.array(strat).ravel())
     print("strat: ", grid_strat)
 
     strat_perturbed = grid_strat + random_generator.normal(0, 1./12, len(grid_strat))
-    #"""
+    """
 
     ### if I compare against a perturbed strategy, it's only fair to include those extra times in the ground truth times
     x_fine_all_perturbed = np.sort(np.unique(np.concatenate((x_fine_all, strat_perturbed, grid_strat)))) # strat_perturbed vs grid_strat
@@ -159,7 +162,7 @@ for i in range(10):
     df_fine = df_fine.drop_duplicates(subset=['x'])
     #print("df fine:", df_fine)
 
-    not_injected = df_fine.loc[df_fine.x.isin(strat_perturbed)] # grid_strat vs strat_perturbed
+    not_injected = df_fine.loc[df_fine.x.isin(grid_strat)] # grid_strat vs strat_perturbed
 
     injected_x = random_generator.choice(x_fine_all_perturbed_prediction, 30, replace=False)
 
@@ -293,7 +296,8 @@ for i in range(10):
     ### residuals
     q = np.percentile(preds, [16, 50, 84], axis=0)
     q_inj = np.percentile(preds_inj_rec, [16, 50, 84], axis=0)
-
+    q_star = np.percentile(preds_star, [16, 50, 84], axis=0)
+    q_inj_star = np.percentile(preds_inj_rec_star, [16, 50, 84], axis=0)
     #print(np.percentile(data.posterior.data_vars['K'], 84) - np.percentile(data.posterior.data_vars['K'], 50))
     #print(np.percentile(data.posterior.data_vars['K'], 50) - np.percentile(data.posterior.data_vars['K'], 16))
     #print(np.percentile(data.posterior.data_vars['K'], 50))
@@ -303,12 +307,18 @@ for i in range(10):
     print("q[1]: ", q[1])
     res_injected = injected.y - q_inj[1]
     res_training = not_injected.y - q[1]
+    res_injected_star = injected.star - q_inj_star[1]
+    res_training_star = not_injected.star - q_star[1]
+
     res_trainings_std.append(np.std(res_training))
     res_injecteds_std.append(np.std(res_injected))
     res_trainings_mean.append(np.mean(res_training))
     res_injecteds_mean.append(np.mean(res_injected))
     res_trainings_median.append(np.median(res_training))
     res_injecteds_median.append(np.median(res_injected))
+
+    res_trainings_std_star.append(np.std(res_training_star))
+    res_injecteds_std_star.append(np.std(res_injected_star))
 
     #plt.scatter(injected.x, injected.y)
     #plt.scatter(not_injected.x, not_injected.y)
@@ -349,6 +359,9 @@ print("training residual median: ", np.mean(res_trainings_median))
 print("validation residual median: ", np.mean(res_injecteds_median))
 print("training residual spread: ", np.mean(res_trainings_std))
 print("validation residual spread: ", np.mean(res_injecteds_std))
+print("")
+print("training star residual spread: ", np.mean(res_trainings_std_star))
+print("validation star residual spread: ", np.mean(res_injecteds_std_star))
 
 #plt.errorbar(np.array(injected.x), res_injected, yerr, fmt=".k", capsize=0, label='injected combined', color='r')
 #plt.errorbar(np.array(not_injected.x), res_training, yerr, fmt=".k", capsize=0, label='training combined', color='k')
