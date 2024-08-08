@@ -2,7 +2,7 @@
 
 [Pronunciation Guide](https://user-images.githubusercontent.com/16911363/212941685-d887b375-176f-4c23-b011-5f6968028a33.mp4)
 
-Gaspery is a package that uses the Fisher Information Matrix (FIM) to evaluate different radial velocity (RV) observing strategies. A paper (Lam, Bedell & Zhao, in prep) will also follow this work.
+Gaspery is a package that uses the Fisher Information Matrix (FIM) to evaluate different radial velocity (RV) observing strategies. A paper (Lam, Bedell, Zhao, Gupta & Ballard, submitted) will also follow this work.
 
 The Fisher Information Matrix describes the amount of information a time series contains on each free parameter input in a model. For exoplanet observers, the free parameter of interest is often the RV semi-amplitude, K. Gaspery is intended to help observational exoplanet astronomers construct the observing strategy that maximizes information (or minimizes uncertainty) on K. However, one can maximize information on any free parameter from any model, given a time series support (x-axis). So, whether you want to extend gaspery to deal with more complex models and problems or want integration with different covariance kernels (we are fully integrated with tinygp), we are happy to field your suggestions on this repo's Git Issues!
 
@@ -33,7 +33,7 @@ Start here for usecases!
 
 - fixed_budget.ipynb: Given a target AND a fixed allocation of observations, how do I best spend these observing nights to minimize the uncertainty on K? 
 
-- beat_frequencies.ipynb: Given a host star, how do various combinations of planet orbital period and observing cadence interact to produce "beat frequencies" (contours of bad information content due to aliasing)?
+- beat_frequencies.ipynb: Given a host star, how do various combinations of planet orbital period and observing cadence interact to produce "beat frequencies" (contours of low information content due to aliasing)?
 
 - companions.ipynb: Fixed budget, but with more than one planet in a system!
 
